@@ -45,9 +45,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         email: cleanEmail,
         password: crypto.randomUUID(),
         options: {
-          emailRedirectTo: import.meta.env.PROD 
-            ? 'https://your-netlify-domain.netlify.app'
-            : window.location.origin,
+          emailRedirectTo: window.location.origin,
           data: {
             name: profile.name
           }
