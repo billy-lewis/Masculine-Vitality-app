@@ -13,6 +13,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
@@ -30,22 +31,36 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const handleEmailSubmit = async () => {
     try {
       setIsLoading(true);
-      console.log('Starting email submission...');
-      
-      // Clean and validate email
-      const cleanEmail = profile.email.trim().toLowerCase();
+      setError(null);
       
       // Basic email validation
-      if (!cleanEmail.match(/^[^@]+@[^@]+\.[^@]+$/)) {
-        throw new Error('Please enter a valid email address');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(profile.email)) {
+        setError('Please enter a valid email address');
+        setIsLoading(false);
+        return;
       }
 
-      // Create user with cleaned email
+      // First check if user already exists
+      const { data: { user: existingUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (existingUser) {
+        // User already exists, proceed to next step
+        setUserId(existingUser.id);
+        setStep(prev => prev + 1);
+        return;
+      }
+
+      // Generate a secure password
+      const password = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+      
+      console.log('Attempting signup...'); // Debug log
+
+      // Sign up the user
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: crypto.randomUUID(),
+        email: profile.email,
+        password: password,
         options: {
-          emailRedirectTo: window.location.origin,
           data: {
             name: profile.name
           }
@@ -54,44 +69,36 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       if (signUpError) {
         console.error('Signup error:', signUpError);
-        throw signUpError;
+        setError(signUpError.message);
+        return;
       }
 
-      if (!data.user) {
-        console.error('No user returned from signup');
-        throw new Error('Failed to create account');
+      if (!data?.user?.id) {
+        setError('Failed to create account');
+        return;
       }
 
-      console.log('User created:', data.user.id);
-      setUserId(data.user.id);
-
-      // Save initial profile data with just name and email
+      // Create profile
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert([
-          {
-            id: data.user.id,
-            name: profile.name,
-            email: cleanEmail
-          }
-        ]);
+        .insert({
+          id: data.user.id,
+          name: profile.name,
+          email: profile.email
+        });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
-        throw profileError;
+        console.error('Profile error:', profileError);
+        setError('Failed to create profile');
+        return;
       }
 
-      console.log('Initial profile created successfully');
+      setUserId(data.user.id);
       setStep(prev => prev + 1);
-    } catch (error: any) {
-      console.error('Full error details:', error);
-      if (error.message.includes('already registered')) {
-        alert('This email is already registered. Please use a different email address.');
-      } else if (error.message.includes('valid')) {
-        alert('Please enter a valid email address (e.g., name@example.com)');
-      } else {
-        alert('There was an error creating your profile. Please try again.');
-      }
+
+    } catch (error) {
+      console.error('Submission error:', error);
+      setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -212,6 +219,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       >
         {isLoading ? 'Creating Account...' : 'Continue'}
       </button>
+      {error && (
+        <div className="text-red-500 mt-2">
+          {error}
+        </div>
+      )}
     </div>,
 
     // Inspirations
