@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Journey Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="journey-container">
+        <div id="prompt"></div>
+        <input type="text" id="user-input" placeholder="Type your answer...">
+    </div>
+    <script src="UserJourney.js"></script>
+    <script>
+        // Initialize the journey when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const journey = new UserJourney();
+            journey.start();
+        });
+    </script>
+</body>
+</html> 

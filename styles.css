@@ -1,0 +1,16 @@
+.journey-container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+#prompt {
+  margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+#user-input {
+  width: 100%;
+  padding: 8px;
+  font-size: 1em;
+} 
